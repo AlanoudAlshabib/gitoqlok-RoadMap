@@ -1,0 +1,72 @@
+///$tab Auto-generated section
+Set dataManagerTables = '','Routes- Output';
+//This block renames script tables from non generated section which conflict with the names of managed tables
+
+For each name in $(dataManagerTables) 
+    Let index = 0;
+    Let currentName = name; 
+    Let tableNumber = TableNumber(name); 
+    Let matches = 0; 
+    Do while not IsNull(tableNumber) or (index > 0 and matches > 0)
+        index = index + 1; 
+        currentName = name & '-' & index; 
+        tableNumber = TableNumber(currentName) 
+        matches = Match('$(currentName)', $(dataManagerTables));
+    Loop 
+    If index > 0 then 
+            Rename Table '$(name)' to '$(currentName)'; 
+    EndIf; 
+Next; 
+Set dataManagerTables = ;
+
+
+Unqualify *;
+
+__cityAliasesBase:
+LOAD
+	Alias AS [__City],
+	geoKey AS [__geoKey],
+	CountryCode AS [__CityCountryCode]
+FROM [lib://AttachedFiles/cityAliases.qvd]
+(qvd);
+
+__cityGeoBase:
+LOAD
+	geoKey AS [__geoKey],
+	geoPoint AS [__GeoPoint]
+FROM [lib://AttachedFiles/cityGeo.qvd]
+(qvd);
+
+__cityName2Key:
+MAPPING LOAD
+	__City,
+	__geoKey
+RESIDENT __cityAliasesBase;
+
+__cityKey2GeoPoint:
+MAPPING LOAD
+	__geoKey,
+	__GeoPoint
+RESIDENT __cityGeoBase;
+
+[Routes- Output]:
+LOAD
+	[Source],
+	[Destination],
+	[FC Plying],
+	[No of Transactions],
+	[Actual Sales],
+	[Lost Opportunity],
+	APPLYMAP( '__cityKey2GeoPoint', APPLYMAP( '__cityName2Key', LOWER([Source])), '-') AS [Routes- Output.Source_GeoInfo],
+	APPLYMAP( '__cityKey2GeoPoint', APPLYMAP( '__cityName2Key', LOWER([Destination])), '-') AS [Routes- Output.Destination_GeoInfo]
+ FROM [lib://AttachedFiles/Route-Map Data.xlsx]
+(ooxml, embedded labels, table is [Routes- Output]);
+
+
+
+TAG FIELD [Source] WITH '$geoname', '$relates_Routes- Output.Source_GeoInfo';
+TAG FIELD [Routes- Output.Source_GeoInfo] WITH '$geopoint', '$hidden', '$relates_Source';
+TAG FIELD [Destination] WITH '$geoname', '$relates_Routes- Output.Destination_GeoInfo';
+TAG FIELD [Routes- Output.Destination_GeoInfo] WITH '$geopoint', '$hidden', '$relates_Destination';
+
+DROP TABLES __cityAliasesBase, __cityGeoBase;

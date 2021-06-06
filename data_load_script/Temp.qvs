@@ -1,0 +1,9 @@
+///$tab Temp
+Temp_Facts:
+
+LOAD
+    Source as  CityFrom,
+    Destination as CityTo
+    
+ FROM [lib://AttachedFiles/Route-Map Data.xlsx]
+(ooxml, embedded labels, table is [Routes- Output]);
